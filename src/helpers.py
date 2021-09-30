@@ -3,14 +3,11 @@ import math
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-N = 8
+N = 16
 
 class Measurement():
     def __init__(self, dimstr=None, raw=None):
-        self.raw = self.parse_str(dimstr) if raw is None else abs(raw)
-        if isinstance(self.raw, float):
-            print(dimstr, raw)
-            raise
+        self.raw = self.parse_str(dimstr) if raw is None else int(raw)
 
     def parse_str(self, dimstr):
         try:
@@ -31,7 +28,10 @@ class Measurement():
 
     @property
     def proper(self):
-        return math.floor(self.raw / N), Fraction(self.raw % N, N)
+        if self.raw > 0:
+            return math.floor(self.raw / N), Fraction(self.raw % N, N)
+        else:
+            return math.ceil(self.raw / N), Fraction(self.raw % N, N)
 
     @property
     def graph_val(self):
@@ -44,14 +44,19 @@ class Measurement():
         return int(other * N)
 
     def __repr__(self):
+        jst = 1 if N < 10 else 2
         whole, frac = self.proper
-        return f'{whole} {frac}'
+        sign = ' ' if whole >= 0 else '-'
+        wstr = f'{sign}{str(abs(whole)).rjust(2)}'
+        if frac.numerator:
+            num = str(frac.numerator)
+            denom = str(frac.denominator)
+        else:
+            num, denom = '-', '-'
+        return f'{wstr} {num.rjust(jst)}/{denom.rjust(jst)}'
 
     def __add__(self, other):
         other = self.convert(other)
-        if isinstance(self.raw + other, float):
-            print(f'{self} + {other}')
-            raise
         return Measurement(raw=self.raw + other)
 
     def __sub__(self, other):
@@ -62,7 +67,7 @@ class Measurement():
         return Measurement(raw=self.raw * other)
 
     def __truediv__(self, other):
-        return Measurement(raw=int(self.raw / other))
+        return Measurement(raw=self.raw / other)
 
     def __lt__(self, other):
         other = self.convert(other)
@@ -81,7 +86,7 @@ class Measurement():
         return self.raw >= other
 
     def __pow__(self, other):
-        return Measurement(raw=int(self.raw ** other))
+        return Measurement(raw=self.raw ** other)
 
 class Point():
     def __init__(self, x, y):
@@ -111,9 +116,10 @@ class Point():
         return f'({self.x}, {self.y})'
 
 class Line():
-    def __init__(self, a, b):
+    def __init__(self, a, b, kind=None):
         self.a = a
         self.b = b
+        self.kind = kind
 
     @property
     def length(self):
@@ -121,15 +127,27 @@ class Line():
         y = self.a.y - self.b.y
         return (x ** 2 + y ** 2) ** (1 / 2)
 
-    def graph(self, kind=None):
+    def dist_along(self, length, ref='a'):
+        # returns a point a given distance along a line
+        # as measured from 'ref'
+        p1 = self.a if 'a' else self.b
+        p2 = self.b if 'a' else self.a
+        x = p1.x + (p2.x - p1.x) * (length.raw / self.length.raw)
+        y = p1.y + (p2.y - p1.y) * (length.raw / self.length.raw)
+        return Point(x, y)
+
+    def graph(self):
         x=[self.a.x.raw, self.b.x.raw] 
         y=[self.a.y.raw, self.b.y.raw]
 
-        if kind == 'guide':
+        if self.kind == 'guide':
             color = 'black'
             linestyle = 'dashed'
-        else:
+        elif self.kind == 'temp':
             color = 'red'
+            linestyle = 'dashed'
+        else:
+            color = 'blue'
             linestyle = None
 
         sns.lineplot(x=x, y=y, color=color, linestyle=linestyle)
@@ -140,9 +158,9 @@ class Line():
 
 
 if __name__ == '__main__':
-    print(Measurement('1 2/3'))
-    print(Measurement('4'))
-    print(Measurement('5 6/7'))
+    # print(Measurement('1 2/3'))
+    # print(Measurement('4'))
+    # print(Measurement('5 6/7'))
 
     # Measurement('5 6-7')
     # Measurement('8 9 10')
@@ -160,7 +178,12 @@ if __name__ == '__main__':
     # ln.graph_data()
     # plt.show()
 
-    a = Measurement('3 3/8')
-    b = Measurement('0')
-    print(b - a)
+    # a = Measurement('3 3/8')
+    # b = Measurement('0')
+    # c = b - a
+    # print(c, c.raw)
 
+    a = Point('3 3/8', '29 3/4')
+    b = Point('9 3/8', '28')
+    ln = Line(a, b)
+    ln.dist_along(Measurement('4 1/2'))
