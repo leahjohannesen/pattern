@@ -1,11 +1,13 @@
 from fractions import Fraction
 import math
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 N = 8
 
 class Measurement():
     def __init__(self, dimstr=None, raw=None):
-        self.raw = self.parse_str(dimstr) if raw is None else raw
+        self.raw = self.parse_str(dimstr) if raw is None else abs(raw)
         if isinstance(self.raw, float):
             print(dimstr, raw)
             raise
@@ -31,6 +33,10 @@ class Measurement():
     def proper(self):
         return math.floor(self.raw / N), Fraction(self.raw % N, N)
 
+    @property
+    def graph_val(self):
+        whole, frac = self.proper
+        return whole + float(frac)
 
     def convert(self, other):
         if isinstance(other, Measurement):
@@ -74,6 +80,9 @@ class Measurement():
         other = self.convert(other)
         return self.raw >= other
 
+    def __pow__(self, other):
+        return Measurement(raw=int(self.raw ** other))
+
 class Point():
     def __init__(self, x, y):
         x, y = self.maybe_convert(x, y)
@@ -102,11 +111,32 @@ class Point():
         return f'({self.x}, {self.y})'
 
 class Line():
-    def __init__(self, a, b, label):
+    def __init__(self, a, b):
         self.a = a
         self.b = b
-        self.label = label
 
+    @property
+    def length(self):
+        x = self.a.x - self.b.x
+        y = self.a.y - self.b.y
+        return (x ** 2 + y ** 2) ** (1 / 2)
+
+    def graph(self, kind=None):
+        x=[self.a.x.raw, self.b.x.raw] 
+        y=[self.a.y.raw, self.b.y.raw]
+
+        if kind == 'guide':
+            color = 'black'
+            linestyle = 'dashed'
+        else:
+            color = 'red'
+            linestyle = None
+
+        sns.lineplot(x=x, y=y, color=color, linestyle=linestyle)
+        return
+
+    def __repr__(self):
+        return f'{self.a} -- {self.b}'
 
 
 if __name__ == '__main__':
@@ -117,10 +147,20 @@ if __name__ == '__main__':
     # Measurement('5 6-7')
     # Measurement('8 9 10')
 
-    blah = Measurement(dimstr='4 3/8')
-    print(blah + 3)
-    print(blah - 3)
-    print(blah * 3)
-    print(blah / 3)
-    print(blah + blah)
-    print(blah - blah)
+    # blah = Measurement(dimstr='4 3/8')
+    # print(blah + 3)
+    # print(blah - 3)
+    # print(blah * 3)
+    # print(blah / 3)
+    # print(blah + blah)
+    # print(blah - blah)
+
+    # ln = Line(Point('0', '3'), Point('4', '0'))
+    # ln.length
+    # ln.graph_data()
+    # plt.show()
+
+    a = Measurement('3 3/8')
+    b = Measurement('0')
+    print(b - a)
+
